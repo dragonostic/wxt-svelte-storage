@@ -8,7 +8,7 @@ This package lists [@wxt-dev/storage](https://www.npmjs.com/package/@wxt-dev/sto
 
 It's ideal to export all of your individual state objects or maps in a single file, such as `src/lib/Storage.ts`.  
 
-Basic example:  
+### Basic example
 
 `Storage.ts`:
 ```typescript
@@ -45,16 +45,16 @@ export const items = new SvelteMapStorage<{ [key: string]: boolean }>("local:ite
 </div>
 ```  
 
-You can also set the `manualUpdate` argument to `true` when defining your storage constant, which returns a function to use to manually trigger the browser's storage update. This is useful if you are rapidly causing state changes -- which trigger a slew of storage inserts that can cause the page to lag.  
+### Manually updating
+You can set the `manualUpdate` argument to `true` when defining your storage constant, which returns a function to use to manually trigger the browser's storage update while still tracking and maintaining UI updates.  
 
-Manual update example:  
+This is useful if you are rapidly causing state changes -- which trigger a slew of storage inserts that can cause the page to lag.  
 
 `Storage.ts`:
 ```typescript
 import { stateStorage } from "wxt-svelte-storage";
 
-// The last argument is the manualUpdate property -- we set it to true here
-export const [settings, updateSettings] = stateStorage("sync:settings", { username: "" }, true); 
+export const [settings, updateSettings] = stateStorage("sync:settings", { username: "" }, { manualUpdate: true }); 
 ```
 
 `Component.svelte`:
@@ -66,4 +66,33 @@ export const [settings, updateSettings] = stateStorage("sync:settings", { userna
 <input type="text" bind:value={settings.username} onkeyup={updateSettings}>
 ```  
 
-It should be known that due to the fact that browser storage updates using [@wxt-dev/storage](https://www.npmjs.com/package/@wxt-dev/storage) are asynchronous, a quick flash or flip between the `initialValue` argument provided to `stateStorage` or `SvelteMapStorage` and the value actually stored on the browser may occur on page/content script load.
+### Avoiding flashing/flipping on storage load
+Due to the fact that browser storage updates using [@wxt-dev/storage](https://www.npmjs.com/package/@wxt-dev/storage) are asynchronous, a quick flash or flip between the `initialValue` argument provided to `stateStorage` or `SvelteMapStorage` and the value actually stored on the browser may occur on page/content script load.  
+
+To avoid this, you can pass `async` to the settings when defining your storage constant.  
+
+`Storage.ts`:
+```typescript
+import { stateStorage } from "wxt-svelte-storage";
+
+// settings becomes a promise with a return type of { username: string; }
+export const settings = stateStorage("sync:settings", { username: "" }, { async: true }); 
+```  
+
+You will have to `await` the initial value in your component -- either in the template or in an `onMount()` -- ex:
+
+`Component.svelte`:
+```svelte
+<script lang="ts">
+    import { settings } from "Storage";
+</script>
+
+<span>
+    Your username is:
+    {#await settings}
+        (loading...)
+    {:then fetchedSettings}
+        {fetchedSettings.username}
+    {/await}
+</span>
+```  

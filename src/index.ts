@@ -1,9 +1,11 @@
 import { createSubscriber, SvelteMap } from "svelte/reactivity";
 import { storage, type StorageItemKey, type WxtStorageItem } from "@wxt-dev/storage";
 
-export function stateStorage<T extends Record<string, unknown>>(key: StorageItemKey, initialValue: T, manualUpdate: true): [T, () => Promise<void>];
-export function stateStorage<T extends Record<string, unknown>>(key: StorageItemKey, initialValue: T): T;
-export function stateStorage<T extends Record<string, unknown>>(key: StorageItemKey, initialValue: T, manualUpdate?: boolean) {
+type StateStorageSettings = { manualUpdate?: boolean; async?: boolean; };
+type StateStorageReturn<T, S extends StateStorageSettings> = S['manualUpdate'] extends true ? [S['async'] extends true ? Promise<T> : T, () => Promise<void>] : S['async'] extends true ? Promise<T> : T;
+
+export function stateStorage<T extends Record<string, unknown>, S extends StateStorageSettings = {}>(key: StorageItemKey, initialValue: T, settings?: S): StateStorageReturn<T, S>;
+export function stateStorage<T extends Record<string, unknown>>(key: StorageItemKey, initialValue: T, { manualUpdate = false, async = false }: StateStorageSettings = {}) {
     let subscriberUpdate: () => void | undefined;
     let currentState = initialValue;
 
@@ -13,8 +15,7 @@ export function stateStorage<T extends Record<string, unknown>>(key: StorageItem
         subscriberUpdate?.();
     }
 
-    const storageDefinition = storage.defineItem(key, { init: () => initialValue });
-    storageDefinition.getValue().then(updateFromStorage);
+    const storageDefinition = storage.defineItem(key, { init: () => initialValue, fallback: initialValue });
 
     const subscribe = createSubscriber(update => {
         subscriberUpdate = update;
@@ -34,13 +35,13 @@ export function stateStorage<T extends Record<string, unknown>>(key: StorageItem
                 if (!manualUpdate) storageDefinition.setValue(target);
                 subscriberUpdate?.();
             }
-            
+
             return result;
         },
         deleteProperty(target, prop) {
             const hadKey = Reflect.has(target, prop);
             const result = Reflect.deleteProperty(target, prop);
-            
+
             if (result && hadKey) {
                 if (!manualUpdate) storageDefinition.setValue(target);
                 subscriberUpdate?.();
@@ -50,7 +51,8 @@ export function stateStorage<T extends Record<string, unknown>>(key: StorageItem
         }
     });
 
-	return manualUpdate ? [proxy, () => storageDefinition.setValue(currentState)] : proxy;
+    const returnValue = manualUpdate ? [proxy, () => storageDefinition.setValue(currentState)] : proxy;
+    return async ? storageDefinition.getValue().then(updateFromStorage).then(() => Promise.resolve(returnValue)) : returnValue;
 }
 
 export class SvelteMapStorage<T extends Record<string, unknown>, K extends keyof T & string = keyof T & string> extends SvelteMap<K, T[K]> {
@@ -59,7 +61,7 @@ export class SvelteMapStorage<T extends Record<string, unknown>, K extends keyof
 
     constructor(key: StorageItemKey, initialValue: T, manualUpdate?: boolean) {
         super();
-        
+
         this.manualUpdate = !!manualUpdate;
         this.storageDefinition = storage.defineItem(key, { init: () => initialValue });
 
