@@ -25,7 +25,7 @@ export const items = new SvelteMapStorage<{ [key: string]: boolean }>("local:ite
 ```  
 
 `Component.svelte`:
-```html
+```svelte
 <script lang="ts">
     import { settings, syncData, items } from "Storage";
 </script>
@@ -45,7 +45,9 @@ export const items = new SvelteMapStorage<{ [key: string]: boolean }>("local:ite
 </div>
 ```  
 
-You can also set the `manualUpdate` argument to `true` when defining your storage constant, which returns a function to use to manually trigger the browser's storage update. This is useful if you are rapidly causing state changes -- which trigger a slew of storage inserts that can cause the page to lag:  
+You can also set the `manualUpdate` argument to `true` when defining your storage constant, which returns a function to use to manually trigger the browser's storage update. This is useful if you are rapidly causing state changes -- which trigger a slew of storage inserts that can cause the page to lag.  
+
+Manual update example:  
 
 `Storage.ts`:
 ```typescript
@@ -56,10 +58,12 @@ export const [settings, updateSettings] = stateStorage("sync:settings", { userna
 ```
 
 `Component.svelte`:
-```html
+```svelte
 <script lang="ts">
     import { settings, updateSettings } from "Storage";
 </script>
 
 <input type="text" bind:value={settings.username} onkeyup={updateSettings}>
-```
+```  
+
+It should be known that due to the fact that browser storage updates using [@wxt-dev/storage](https://www.npmjs.com/package/@wxt-dev/storage) are asynchronous, a quick flash or flip between the `initialValue` argument provided to `stateStorage` or `SvelteMapStorage` and the value actually stored on the browser may occur on page/content script load.
