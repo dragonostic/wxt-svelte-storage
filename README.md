@@ -14,9 +14,13 @@ Basic example:
 ```typescript
 import { stateStorage, SvelteMapStorage } from "wxt-svelte-storage";
 
-export const settings = stateStorage<{ theme: "light" | "dark" }>("local:settings", { theme: "light" }); // Strict typing
-export const syncData = stateStorage("sync:data", { clicks: 0 }); // Inferred typing -- "clicks" will be a number
+// Strict typing
+export const settings = stateStorage<{ theme: "light" | "dark" }>("local:settings", { theme: "light" });
 
+// Inferred typing -- "clicks" will be a number
+export const syncData = stateStorage("sync:data", { clicks: 0 });
+
+// SvelteMapStorage example
 export const items = new SvelteMapStorage<{ [key: string]: boolean }>("local:items", { "firstKey": true, "secondKey": false });
 ```  
 
@@ -47,7 +51,8 @@ You can also set the `manualUpdate` argument to `true` when defining your storag
 ```typescript
 import { stateStorage } from "wxt-svelte-storage";
 
-export const [settings, updateSettings] = stateStorage("sync:settings", { username: "" }, true); // The last argument is the manualUpdate property -- we set it to true here
+// The last argument is the manualUpdate property -- we set it to true here
+export const [settings, updateSettings] = stateStorage("sync:settings", { username: "" }, true); 
 ```
 
 `Component.svelte`:
