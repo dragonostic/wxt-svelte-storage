@@ -41,7 +41,7 @@ export const items = new SvelteMapStorage<{ [key: string]: boolean }>("local:ite
 </div>
 ```  
 
-You can also set the `manualUpdate` argument to `true` when defining your storage constant, which returns a function to use to manually trigger the browser's storage update. This is useful if you are rapidly causing state changes -- which trigger a slew of storage inserts that cause the page to lag -- so that you may manually trigger the storage insert when rapid updates have calmed:  
+You can also set the `manualUpdate` argument to `true` when defining your storage constant, which returns a function to use to manually trigger the browser's storage update. This is useful if you are rapidly causing state changes -- which trigger a slew of storage inserts that can cause the page to lag:  
 
 `Storage.ts`:
 ```typescript
@@ -57,4 +57,4 @@ export const [settings, updateSettings] = stateStorage("sync:settings", { userna
 </script>
 
 <input type="text" bind:value={settings.username} onkeyup={updateSettings}>
-```  
+```
