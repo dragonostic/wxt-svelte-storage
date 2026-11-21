@@ -1,9 +1,9 @@
 import { createSubscriber, SvelteMap } from "svelte/reactivity";
-import { storage, type StorageItemKey, type WxtStorageItem } from "wxt/utils/storage";
+import { storage, type StorageItemKey, type WxtStorageItem } from "@wxt-dev/storage";
 
-export function storageState<T extends Record<string, unknown>>(key: StorageItemKey, initialValue: T, manualUpdate: true): [T, () => Promise<void>];
-export function storageState<T extends Record<string, unknown>>(key: StorageItemKey, initialValue: T): T;
-export function storageState<T extends Record<string, unknown>>(key: StorageItemKey, initialValue: T, manualUpdate?: boolean) {
+export function stateStorage<T extends Record<string, unknown>>(key: StorageItemKey, initialValue: T, manualUpdate: true): [T, () => Promise<void>];
+export function stateStorage<T extends Record<string, unknown>>(key: StorageItemKey, initialValue: T): T;
+export function stateStorage<T extends Record<string, unknown>>(key: StorageItemKey, initialValue: T, manualUpdate?: boolean) {
     let subscriberUpdate: () => void | undefined;
     let currentState = initialValue;
 
@@ -15,6 +15,7 @@ export function storageState<T extends Record<string, unknown>>(key: StorageItem
 
     const storageDefinition = storage.defineItem(key, { init: () => initialValue });
     storageDefinition.getValue().then(updateFromStorage);
+
     const subscribe = createSubscriber(update => {
         subscriberUpdate = update;
         return storageDefinition.watch(updateFromStorage);
@@ -52,7 +53,7 @@ export function storageState<T extends Record<string, unknown>>(key: StorageItem
 	return manualUpdate ? [proxy, () => storageDefinition.setValue(currentState)] : proxy;
 }
 
-export class StorageMap<T extends Record<string, unknown>, K extends keyof T & string = keyof T & string> extends SvelteMap<K, T[K]> {
+export class SvelteMapStorage<T extends Record<string, unknown>, K extends keyof T & string = keyof T & string> extends SvelteMap<K, T[K]> {
     private storageDefinition: WxtStorageItem<T, {}>;
     private manualUpdate: boolean;
 

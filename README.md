@@ -1,79 +1,60 @@
-# Svelte library
+# WXT Svelte Storage
 
-Everything you need to build a Svelte library, powered by [`sv`](https://npmjs.com/package/sv).
+Simple function and class that wraps browser extension storage into state-like reactive objects.
 
-Read more about creating a library [in the docs](https://svelte.dev/docs/kit/packaging).
+## Usage
 
-## Creating a project
+This package lists [@wxt-dev/storage](https://www.npmjs.com/package/@wxt-dev/storage) as a dependency, and works best with [WXT](https://wxt.dev/) although it can be used with other frameworks like [crxjs](https://github.com/crxjs/chrome-extension-tools).
 
-If you're seeing this, you've probably already done this step. Congrats!
+It's ideal to export all of your individual state objects or maps in a single file, such as `src/lib/Storage.ts`.  
 
-```sh
-# create a new project in the current directory
-npx sv create
+Basic example:  
 
-# create a new project in my-app
-npx sv create my-app
+`Storage.ts`:
+```typescript
+import { stateStorage, SvelteMapStorage } from "wxt-svelte-storage";
+
+export const settings = stateStorage<{ theme: "light" | "dark" }>("local:settings", { theme: "light" }); // Strict typing
+export const syncData = stateStorage("sync:data", { clicks: 0 }); // Inferred typing -- "clicks" will be a number
+
+export const items = new SvelteMapStorage<{ [key: string]: boolean }>("local:items", { "firstKey": true, "secondKey": false });
+```  
+
+`Component.svelte`:
+```html
+<script lang="ts">
+    import { settings, syncData, items } from "Storage";
+</script>
+
+<div data-theme="{settings.theme}">
+    <button onclick={() => settings.theme = settings.theme === "light" ? "dark" : "light"}>Toggle {settings.theme} theme</button>
+    <button onclick={() => syncData.clicks++}>Click me!</button>
+    {#each items as [key, value]}
+        <div>
+            <span>{key}: {value}</span>
+            <button onclick={() => items.set(key, !value)}>Toggle {key}</button>
+        </div>
+    {/each}
+    {#if items.get("firstKey")}
+        <span>First key!</span>
+    {/if}
+</div>
+```  
+
+You can also set the `manualUpdate` argument to `true` when defining your storage constant, which returns a function to use to manually trigger the browser's storage update. This is useful if you are rapidly causing state changes -- which trigger a slew of storage inserts that cause the page to lag -- so that you may manually trigger the storage insert when rapid updates have calmed:  
+
+`Storage.ts`:
+```typescript
+import { stateStorage } from "wxt-svelte-storage";
+
+export const [settings, updateSettings] = stateStorage("sync:settings", { username: "" }, true); // The last argument is the manualUpdate property -- we set it to true here
 ```
 
-To recreate this project with the same configuration:
+`Component.svelte`:
+```html
+<script lang="ts">
+    import { settings, updateSettings } from "Storage";
+</script>
 
-```sh
-# recreate this project
-bun x sv@1.7.0 create --template library --types ts --install bun ./
-```
-
-## Adding features
-
-Add features to your project with `sv add`:
-
-```sh
-npx sv add
-```
-
-For example, to add Tailwind CSS:
-
-```sh
-npx sv add tailwindcss
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-Everything inside `src/lib` is part of your library, everything inside `src/routes` can be used as a showcase or preview app.
-
-## Building
-
-To build your library:
-
-```sh
-npm pack
-```
-
-To create a production version of your showcase app:
-
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
-
-## Publishing
-
-Go into the `package.json` and give your package the desired name through the `"name"` option. Also consider adding a `"license"` field and point it to a `LICENSE` file which you can create from a template (one popular option is the [MIT license](https://opensource.org/license/mit/)).
-
-To publish your library to [npm](https://www.npmjs.com):
-
-```sh
-npm publish
-```
+<input type="text" bind:value={settings.username} onkeyup={updateSettings}>
+```  
