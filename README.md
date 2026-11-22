@@ -6,7 +6,7 @@ Simple to use function and classes that wrap both Svelte built-ins and the brows
 
 This package lists [@wxt-dev/storage](https://www.npmjs.com/package/@wxt-dev/storage) as a dependency, and works best with [WXT](https://wxt.dev/) although it can be used with other frameworks like [crxjs](https://github.com/crxjs/chrome-extension-tools).
 
-It's ideal to export all of your individual state objects or maps in a single file, such as `src/lib/Storage.ts`.  
+It's best to export all of your individual state objects, maps, or sets in a single file such as `src/lib/Storage.ts`.  
 
 ### Basic example
 
