@@ -1,11 +1,14 @@
 import { createSubscriber, SvelteMap, SvelteSet } from "svelte/reactivity";
 import { storage, type StorageItemKey, type WxtStorageItem } from "@wxt-dev/storage";
 
-type StateStorageSettings = { manualUpdate?: boolean; async?: boolean; };
-type StateStorageReturn<T, S extends StateStorageSettings> = S['manualUpdate'] extends true ? [S['async'] extends true ? Promise<T> : T, () => Promise<void>] : S['async'] extends true ? Promise<T> : T;
-
-export function stateStorage<T extends Record<string, unknown>, S extends StateStorageSettings = {}>(key: StorageItemKey, initialValue: T, settings?: S): StateStorageReturn<T, S>;
-export function stateStorage<T extends Record<string, unknown>>(key: StorageItemKey, initialValue: T, { manualUpdate = false, async = false }: StateStorageSettings = {}) {
+export function stateStorage<T extends object>(key: StorageItemKey, initialValue: T, settings: { manualUpdate?: false; async: true; }): Promise<T>;
+export function stateStorage<T extends object>(key: StorageItemKey, initialValue: T, settings: { manualUpdate: true; async: true; }): [Promise<T>, () => Promise<void>];
+export function stateStorage<T extends object>(key: StorageItemKey, initialValue: T, settings: { manualUpdate: true; async?: false; }): [T, () => Promise<void>];
+export function stateStorage<T extends object>(key: StorageItemKey, initialValue: T, settings: { manualUpdate?: false; async?: false; }): T;
+export function stateStorage<T extends object>(key: StorageItemKey, initialValue: T, settings: { async?: false; }): T;
+export function stateStorage<T extends object>(key: StorageItemKey, initialValue: T, settings: { manualUpdate?: false; }): T;
+export function stateStorage<T extends object>(key: StorageItemKey, initialValue: T): T;
+export function stateStorage<T extends object>(key: StorageItemKey, initialValue: T, { manualUpdate = false, async = false }: { manualUpdate?: boolean; async?: boolean; } = {}) {
     let subscriberUpdate: () => void | undefined;
     let currentState = initialValue;
 
@@ -16,6 +19,7 @@ export function stateStorage<T extends Record<string, unknown>>(key: StorageItem
     }
 
     const storageDefinition = storage.defineItem(key, { init: () => initialValue, fallback: initialValue });
+    const getStorage = storageDefinition.getValue().then(updateFromStorage);
 
     const subscribe = createSubscriber(update => {
         subscriberUpdate = update;
@@ -23,27 +27,27 @@ export function stateStorage<T extends Record<string, unknown>>(key: StorageItem
     });
 
     const proxy = new Proxy(currentState, {
-        get(target, prop, receiver) {
+        get(obj, prop, receiver) {
             subscribe();
-            return Reflect.get(target, prop, receiver);
+            return Reflect.get(obj, prop, receiver);
         },
-        set(target, prop, value, receiver) {
-            const oldValue = Reflect.get(target, prop, receiver);
-            const result = Reflect.set(target, prop, value, receiver);
+        set(obj, prop, value, receiver) {
+            const oldValue = Reflect.get(obj, prop, receiver);
+            const result = Reflect.set(obj, prop, value, receiver);
 
-            if (result && !Object.is(oldValue, target)) {
-                if (!manualUpdate) storageDefinition.setValue(target);
+            if (result && !Object.is(oldValue, obj)) {
+                if (!manualUpdate) storageDefinition.setValue(obj);
                 subscriberUpdate?.();
             }
 
             return result;
         },
-        deleteProperty(target, prop) {
-            const hadKey = Reflect.has(target, prop);
-            const result = Reflect.deleteProperty(target, prop);
+        deleteProperty(obj, prop) {
+            const hadKey = Reflect.has(obj, prop);
+            const result = Reflect.deleteProperty(obj, prop);
 
             if (result && hadKey) {
-                if (!manualUpdate) storageDefinition.setValue(target);
+                if (!manualUpdate) storageDefinition.setValue(obj);
                 subscriberUpdate?.();
             }
 
@@ -52,7 +56,7 @@ export function stateStorage<T extends Record<string, unknown>>(key: StorageItem
     });
 
     const returnValue = manualUpdate ? [proxy, () => storageDefinition.setValue(currentState)] : proxy;
-    return async ? storageDefinition.getValue().then(updateFromStorage).then(() => Promise.resolve(returnValue)) : returnValue;
+    return async ? getStorage.then(() => Promise.resolve(returnValue)) : returnValue;
 }
 
 export class SvelteMapStorage<T extends Record<string, unknown>, K extends keyof T & string = keyof T & string> extends SvelteMap<K, T[K]> {
