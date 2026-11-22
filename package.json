@@ -1,26 +1,47 @@
 {
 	"name": "wxt-svelte-storage",
 	"version": "0.0.1",
-	"keywords": ["svelte"],
+	"keywords": [
+		"svelte",
+		"wxt",
+		"webext",
+		"browser-extension",
+		"web-extension",
+		"state-management",
+		"typescript",
+		"chrome",
+		"firefox"
+	],
 	"type": "module",
 	"main": "./dist/index.cjs",
 	"module": "./dist/index.mjs",
-	"types": "./dist/index.d.mts",
-	"files": ["dist"],
+	"types": "./dist/index.d.cts",
+	"files": [
+		"dist"
+	],
 	"scripts": {
 		"build": "tsdown",
 		"check": "bun run build && check",
-		"prepack": "bun run build"
+		"prepublishOnly": "bun run build"
 	},
 	"devDependencies": {
+		"@arethetypeswrong/core": "^0.18.5",
 		"@types/bun": "^1.4.5",
-		"typescript": "6.0.2",
-		"tsdown": "^0.23.7"
+		"publint": "^0.3.25",
+		"tsdown": "^0.23.7",
+		"typescript": "6.0.2"
 	},
 	"dependencies": {
 		"@wxt-dev/storage": "^1.4.0"
 	},
 	"peerDependencies": {
 		"svelte": "^5.59.1"
+	},
+	"exports": {
+		".": {
+			"import": "./dist/index.mjs",
+			"require": "./dist/index.cjs"
+		},
+		"./package.json": "./package.json"
 	}
 }

@@ -1,13 +1,11 @@
 import { defineConfig } from "tsdown";
 
-const entry = ["./src/index.ts"];
-
-export default defineConfig([
-    {
-        entry,
-    },
-    {
-        entry,
-        format: "cjs",
-    },
-]);
+export default defineConfig({
+    entry: ["./src/index.ts"],
+    format: ["module", "cjs"],
+    dts: true,
+    clean: true,
+    exports: true,
+    publint: true,
+    attw: true,
+});
