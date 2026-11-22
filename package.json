@@ -1,5 +1,10 @@
 {
 	"name": "wxt-svelte-storage",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/dragonostic/wxt-svelte-storage.git"
+    },
 	"version": "0.0.2",
 	"keywords": [
 		"svelte",
