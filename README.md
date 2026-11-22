@@ -1,6 +1,6 @@
 # WXT Svelte Storage
 
-Simple function and class that wraps browser extension storage into state-like reactive objects.
+Simple to use function and classes that wrap both Svelte built-ins and the browser extension storage API together into state-like reactive storages.
 
 ## Usage
 

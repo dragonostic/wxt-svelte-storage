@@ -1,4 +1,4 @@
-import { createSubscriber, SvelteMap } from "svelte/reactivity";
+import { createSubscriber, SvelteMap, SvelteSet } from "svelte/reactivity";
 import { storage, type StorageItemKey, type WxtStorageItem } from "@wxt-dev/storage";
 
 type StateStorageSettings = { manualUpdate?: boolean; async?: boolean; };
@@ -56,21 +56,21 @@ export function stateStorage<T extends Record<string, unknown>>(key: StorageItem
 }
 
 export class SvelteMapStorage<T extends Record<string, unknown>, K extends keyof T & string = keyof T & string> extends SvelteMap<K, T[K]> {
-    private storageDefinition: WxtStorageItem<T, {}>;
+    private storageDefinition: WxtStorageItem<T | undefined, {}>;
     private manualUpdate: boolean;
 
-    constructor(key: StorageItemKey, initialValue: T, manualUpdate?: boolean) {
+    constructor(key: StorageItemKey, initialValue?: T, manualUpdate?: boolean) {
         super();
 
         this.manualUpdate = !!manualUpdate;
-        this.storageDefinition = storage.defineItem(key, { init: () => initialValue });
+        this.storageDefinition = storage.defineItem(key, { init: () => initialValue, fallback: initialValue });
 
         this.storageDefinition.getValue()
-            .then(results => this.#updateFromStorage(results))
-            .finally(() => this.storageDefinition.watch(results => this.#updateFromStorage(results)));
+            .then(results => this.updateFromStorage(results))
+            .finally(() => this.storageDefinition.watch(results => this.updateFromStorage(results)));
     }
 
-    #updateFromStorage(results: T | null) {
+    private updateFromStorage(results: T | undefined) {
         if (!results) return;
 
         super.clear();
@@ -97,5 +97,46 @@ export class SvelteMapStorage<T extends Record<string, unknown>, K extends keyof
 
     override get<H extends T[K] = T[K]>(key: K) {
         return super.get(key) as H;
+    }
+}
+
+export class SvelteSetStorage<T> extends SvelteSet<T> {
+    private storageDefinition: WxtStorageItem<Iterable<T> | undefined, {}>;
+    private manualUpdate: boolean;
+
+    constructor(key: StorageItemKey, initialValue?: Iterable<T>, manualUpdate?: boolean) {
+        super();
+
+        this.manualUpdate = !!manualUpdate;
+        this.storageDefinition = storage.defineItem(key, { init: () => initialValue, fallback: initialValue });
+
+        this.storageDefinition.getValue()
+            .then(results => this.updateFromStorage(results))
+            .finally(() => this.storageDefinition.watch(results => this.updateFromStorage(results)));
+    }
+
+    private updateFromStorage(results: Iterable<T> | undefined) {
+        if (!results) return;
+
+        super.clear();
+        for (const value of results) {
+            super.add(value);
+        }
+    }
+
+    update() {
+        return this.storageDefinition.setValue(this.values());
+    }
+
+    override add(value: T) {
+        const newSet = super.add(value);
+        if (!this.manualUpdate) this.update();
+        return newSet;
+    }
+
+    override delete(value: T) {
+        const deleted = super.delete(value);
+        if (deleted && !this.manualUpdate) this.update();
+        return deleted;
     }
 }
