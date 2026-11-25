@@ -61,9 +61,9 @@ export function stateStorage<T extends object>(key: StorageItemKey, initialValue
     return async ? getStorage.then(() => Promise.resolve(returnValue)) : returnValue;
 }
 
-export class SvelteMapStorage<T extends Record<string, unknown>, K extends keyof T & string = keyof T & string> extends SvelteMap<K, T[K]> {
-    private storageDefinition: WxtStorageItem<T | null, {}>;
-    private manualUpdate: boolean;
+export class SvelteMapStorage<T extends Record<K, T[K]>, K extends keyof T & string = keyof T & string> extends SvelteMap<K, T[K]> {
+    #storageDefinition: WxtStorageItem<T | null, {}>;
+    #manualUpdate: boolean;
 
     constructor(key: StorageItemKey, initialValue?: T, { manualUpdate = false, async = false, ...storageOptions }: StorageOptions<T> = {}) {
         super();
@@ -74,36 +74,36 @@ export class SvelteMapStorage<T extends Record<string, unknown>, K extends keyof
             options.fallback = initialValue;
         }
 
-        this.manualUpdate = manualUpdate;
-        this.storageDefinition = storage.defineItem<T>(key, options);
+        this.#manualUpdate = manualUpdate;
+        this.#storageDefinition = storage.defineItem<T>(key, options);
 
-        this.storageDefinition.getValue()
-            .then(results => this.updateFromStorage(results))
-            .finally(() => this.storageDefinition.watch(results => this.updateFromStorage(results)));
+        this.#storageDefinition.getValue()
+            .then(results => this.#updateFromStorage(results))
+            .finally(() => this.#storageDefinition.watch(results => this.#updateFromStorage(results)));
     }
 
-    private updateFromStorage(results: T | null) {
+    #updateFromStorage(results: T | null) {
         if (!results) return;
 
         super.clear();
-        for (const [key, value] of Object.entries(results)) {
-            super.set(key as K, value as T[K]);
+        for (const [key, value] of Object.entries<T[K]>(results)) {
+            super.set(key as K, value);
         }
     }
 
     update() {
-        return this.storageDefinition.setValue(Object.fromEntries(this) as T);
+        return this.#storageDefinition.setValue(Object.fromEntries(super.entries()) as T);
     }
 
     override set(key: K, value: T[K]) {
         const newMap = super.set(key, value);
-        if (!this.manualUpdate) this.update();
+        if (!this.#manualUpdate) this.update();
         return newMap;
     }
 
     override delete(key: K) {
         const deleted = super.delete(key);
-        if (deleted && !this.manualUpdate) this.update();
+        if (deleted && !this.#manualUpdate) this.update();
         return deleted;
     }
 
@@ -113,8 +113,8 @@ export class SvelteMapStorage<T extends Record<string, unknown>, K extends keyof
 }
 
 export class SvelteSetStorage<T> extends SvelteSet<T> {
-    private storageDefinition: WxtStorageItem<Iterable<T> | null, {}>;
-    private manualUpdate: boolean;
+    #storageDefinition: WxtStorageItem<Iterable<T> | null, {}>;
+    #manualUpdate: boolean;
 
     constructor(key: StorageItemKey, initialValue?: Iterable<T>, { manualUpdate = false, async = false, ...storageOptions }: StorageOptions<Iterable<T>> = {}) {
         super();
@@ -125,15 +125,15 @@ export class SvelteSetStorage<T> extends SvelteSet<T> {
             options.fallback = initialValue;
         }
 
-        this.manualUpdate = !!manualUpdate;
-        this.storageDefinition = storage.defineItem<Iterable<T>>(key, options);
+        this.#manualUpdate = !!manualUpdate;
+        this.#storageDefinition = storage.defineItem<Iterable<T>>(key, options);
 
-        this.storageDefinition.getValue()
-            .then(results => this.updateFromStorage(results))
-            .finally(() => this.storageDefinition.watch(results => this.updateFromStorage(results)));
+        this.#storageDefinition.getValue()
+            .then(results => this.#updateFromStorage(results))
+            .finally(() => this.#storageDefinition.watch(results => this.#updateFromStorage(results)));
     }
 
-    private updateFromStorage(results: Iterable<T> | null) {
+    #updateFromStorage(results: Iterable<T> | null) {
         if (!results) return;
 
         super.clear();
@@ -143,18 +143,18 @@ export class SvelteSetStorage<T> extends SvelteSet<T> {
     }
 
     update() {
-        return this.storageDefinition.setValue(this.values());
+        return this.#storageDefinition.setValue(this.values());
     }
 
     override add(value: T) {
         const newSet = super.add(value);
-        if (!this.manualUpdate) this.update();
+        if (!this.#manualUpdate) this.update();
         return newSet;
     }
 
     override delete(value: T) {
         const deleted = super.delete(value);
-        if (deleted && !this.manualUpdate) this.update();
+        if (deleted && !this.#manualUpdate) this.update();
         return deleted;
     }
 }
